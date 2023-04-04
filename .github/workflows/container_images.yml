@@ -3,8 +3,9 @@ name: Create and test container images
 on: [push, pull_request]
 
 jobs:
-  create_container_image:
+  create-container-image:
     strategy:
+      fail-fast: false
       matrix:
         image:
           - { name: "boefjes", context: "." }
@@ -52,3 +53,80 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  test-container-images:
+    needs: create-container-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Start and initialize containers
+        run: |
+          make env
+          docker-compose -f docker-compose.release-example.yml up -d
+          docker-compose -f docker-compose.release-example.yml exec katalogus python3 -m boefjes.seed
+          docker-compose -f docker-compose.release-example.yml exec rocky python3 manage.py loaddata OOI_database_seed.json
+          docker-compose -f docker-compose.release-example.yml exec -e DJANGO_SUPERUSER_PASSWORD=robotpassword rocky python3 manage.py createsuperuser --noinput --email robot@localhost
+          docker-compose -f docker-compose.release-example.yml exec rocky python3 manage.py setup_dev_account
+
+      - name: Check Keiko API health or print response
+        run: |
+          for i in {1..15}; do curl -s http://localhost:8005/health | jq .healthy | grep true -q && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -v http://localhost:8005/health) && exit $s ; fi
+
+      - name: Check Bytes API health or print response
+        run: |
+          for i in {1..15}; do curl -s http://localhost:8002/health | jq .healthy | grep true -q && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -v http://localhost:8002/health) && exit $s ; fi
+
+      - name: Check Katalogus API health or print response
+        run: |
+          for i in {1..15}; do curl -s http://localhost:8003/health | jq .healthy | grep true -q && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -v http://localhost:8003/health) && exit $s ; fi
+
+      - name: Check Scheduler API health or print response
+        run: |
+          for i in {1..15}; do curl -s http://localhost:8004/health | jq .healthy | grep true -q && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -v http://localhost:8004/health) && exit $s ; fi
+
+      - name: Check XTDB health or print response
+        run: |
+          for i in {1..15}; do curl -s -H "Accept: application/edn" http://localhost:3000/_dev/_xtdb/test/status && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -s -H "Accept: application/edn" http://localhost:3000/_dev/_xtdb/test/status) && exit $s ; fi
+
+      - name: Create _dev node in Octopoes
+        run: curl -s -X POST http://localhost:8001/_dev/node
+
+      - name: Check Octopoes API health or print response
+        run: |
+          for i in {1..15}; do curl -s http://localhost:8001/_dev/health | jq .healthy | grep true -q && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $(curl -v http://localhost:8001/_dev/health) && exit $s ; fi
+
+      - name: Check if Rocky is up or print response
+        run: |
+          for i in {1..15}; do curl -s -L http://localhost:8000 | grep -q "Welcome to OpenKAT" && s=0 && break || s=$? && sleep 1 ; done
+          if [ $s != 0 ]; then echo $$(curl -v -L http://localhost:8000) && exit $s ; fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Robot Framework
+        run: pip3 install robotframework robotframework-browser robotframework-debuglibrary robotframework-otp robotframework-postgresqldb pyotp
+
+      - name: Initialize rfbrowser
+        run: rfbrowser init
+
+      - name: Run Robot Full Onboarding Flow
+        run: robot -d rocky/tests/robot/results-ci -v headless:true rocky/tests/robot/ci
+
+      - name: Upload Robot Framework reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: rf-results-ci
+          path: /home/runner/work/nl-kat-coordination/nl-kat-coordination/rocky/tests/robot/results*
