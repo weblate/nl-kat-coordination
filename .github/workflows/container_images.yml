@@ -1,17 +1,18 @@
-name: Boefjes Create container image
+name: Create container images
 
-on:
-  push:
-    paths:
-      - boefjes/**
-      - octopoes/**
-  pull_request:
-    paths:
-      - boefjes/**
-      - octopoes/**
+on: [push, pull_request]
 
 jobs:
   create_container_image:
+    strategy:
+      matrix:
+        image:
+          - { name: "boefjes", context: ".", file: "boefjes/Dockerfile"}
+          - { name: "bytes", context: "bytes", file: "Dockerfile"}
+          - { name: "keiko", context: "keiko", file: "Dockerfile"}
+          - { name: "mula", context: "mula", file: "Dockerfile"}
+          - { name: "octopoes", context: "octopoes", file: "Dockerfile"}
+          - { name: "rocky", context: ".", file: "rocky/Dockerfile"}
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -22,7 +23,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/nl-kat-boefjes
+            ghcr.io/${{ github.repository_owner }}/nl-kat-${{ matrix.image.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -44,8 +45,8 @@ jobs:
         with:
           # We don't use git context because that doesn't process .dockerignore
           # https://github.com/docker/cli/issues/2827
-          context: .
-          file: boefjes/Dockerfile
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
           push: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
