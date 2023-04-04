@@ -58,6 +58,9 @@ jobs:
     needs: create-container-image
     runs-on: ubuntu-22.04
 
+    env:
+      KAT_VERSION: ${{ github.ref_name }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
