@@ -1,4 +1,4 @@
-name: Create container images
+name: Create and test container images
 
 on: [push, pull_request]
 
@@ -7,12 +7,12 @@ jobs:
     strategy:
       matrix:
         image:
-          - { name: "boefjes", context: ".", file: "boefjes/Dockerfile"}
-          - { name: "bytes", context: "bytes", file: "Dockerfile"}
-          - { name: "keiko", context: "keiko", file: "Dockerfile"}
-          - { name: "mula", context: "mula", file: "Dockerfile"}
-          - { name: "octopoes", context: "octopoes", file: "Dockerfile"}
-          - { name: "rocky", context: ".", file: "rocky/Dockerfile"}
+          - { name: "boefjes", context: "." }
+          - { name: "bytes", context: "bytes" }
+          - { name: "keiko", context: "keiko" }
+          - { name: "mula", context: "mula" }
+          - { name: "octopoes", context: "octopoes" }
+          - { name: "rocky", context: "." }
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -46,7 +46,7 @@ jobs:
           # We don't use git context because that doesn't process .dockerignore
           # https://github.com/docker/cli/issues/2827
           context: ${{ matrix.image.context }}
-          file: ${{ matrix.image.file }}
+          file: ${{ matrix.image.name }}/Dockerfile
           push: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
