@@ -69,10 +69,15 @@ jobs:
         run: |
           make env
           docker-compose -f docker-compose.release-example.yml up -d
+          echo $?
           docker-compose -f docker-compose.release-example.yml exec -T katalogus python3 -m boefjes.seed
+          echo $?
           docker-compose -f docker-compose.release-example.yml exec -T rocky python3 manage.py loaddata OOI_database_seed.json
+          echo $?
           docker-compose -f docker-compose.release-example.yml exec -T -e DJANGO_SUPERUSER_PASSWORD=robotpassword rocky python3 manage.py createsuperuser --noinput --email robot@localhost
+          echo $?
           docker-compose -f docker-compose.release-example.yml exec -T rocky python3 manage.py setup_dev_account
+          echo $?
 
       - name: Check Keiko API health or print response
         run: |
