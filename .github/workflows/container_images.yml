@@ -70,7 +70,7 @@ jobs:
           make env
           docker-compose -f docker-compose.release-example.yml up -d
           for i in {1..15}; do curl -s -L http://localhost:8000 | grep -q "Welcome to OpenKAT" && s=0 && break || s=$? && sleep 1 ; done
-          if [ $s != 0 ]; then echo $$(curl -v -L http://localhost:8000) && exit $s ; fi
+          if [ $s != 0 ]; then echo $(curl -v -L http://localhost:8000) && exit $s ; fi
           echo "Rocky started"
           docker-compose -f docker-compose.release-example.yml exec -T katalogus python3 -m boefjes.seed
           echo $?
@@ -117,7 +117,7 @@ jobs:
       - name: Check if Rocky is up or print response
         run: |
           for i in {1..15}; do curl -s -L http://localhost:8000 | grep -q "Welcome to OpenKAT" && s=0 && break || s=$? && sleep 1 ; done
-          if [ $s != 0 ]; then echo $$(curl -v -L http://localhost:8000) && exit $s ; fi
+          if [ $s != 0 ]; then echo $(curl -v -L http://localhost:8000) && exit $s ; fi
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
