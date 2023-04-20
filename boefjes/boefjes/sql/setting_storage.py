@@ -43,7 +43,7 @@ class SQLSettingsStorage(SessionMixin, SettingsStorage):
         return json.loads(self.encryption.decode(instance.values))
 
     def create(self, key: str, value, organisation_id: str, plugin_id: str) -> None:
-        logger.info("Saving settings: %s for organisation %s", settings, organisation_id)
+        logger.info("Saving settings: %s=%s for organisation %s", key, value, organisation_id)
 
         try:
             instance = self._db_instance_by_id(organisation_id, plugin_id)
