@@ -19,7 +19,7 @@ class AppContext:
         services:
             A dict containing all the external services connectors that
             are used and need to be shared in the scheduler application.
-        stop_event: A threading.Event object used for communicating a stop
+        exception_event: A threading.Event object used for communicating a stop
             event across threads.
         datastore:
             A SQLAlchemy.SQLAlchemy object used for storing and retrieving
@@ -82,7 +82,7 @@ class AppContext:
             }
         )
 
-        self.stop_event: threading.Event = threading.Event()
+        self.exception_event: threading.Event = threading.Event()
 
         # Repositories
         datastore = sqlalchemy.SQLAlchemy(self.config.database_dsn)

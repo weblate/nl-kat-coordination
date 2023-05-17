@@ -44,8 +44,8 @@ class App:
         """
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.ctx: context.AppContext = ctx
+        self.lock: threading.Lock = threading.Lock()
         self.threads: Dict[str, thread.ThreadRunner] = {}
-        self.stop_event: threading.Event = self.ctx.stop_event
 
         # Initialize schedulers
         self.schedulers: Dict[str, schedulers.Scheduler] = {}
@@ -63,11 +63,9 @@ class App:
         """Gracefully shutdown the scheduler, and all threads."""
         self.logger.info("Shutting down...")
 
-        for s in self.schedulers.values():
-            s.stop()
-
-        for t in self.threads.values():
-            t.join(5)
+        for t in self.threads.copy().values():
+            self.logger.info("Shutting down thread: %s", t.name)
+            t.join()
 
         self.logger.info("Shutdown complete")
 
@@ -93,7 +91,7 @@ class App:
         """
         self.threads[name] = thread.ThreadRunner(
             target=func,
-            stop_event=self.stop_event,
+            exception_event=self.ctx.exception_event,
             interval=interval,
             daemon=daemon,
         )
@@ -190,14 +188,21 @@ class App:
 
         # Get scheduler ids for removals
         removal_scheduler_ids = []
-        for s in self.schedulers.values():
+        for s in self.schedulers.copy().values():
             if s.organisation.id in removals:
                 removal_scheduler_ids.append(s.scheduler_id)
 
-        # Remove schedulers for organisation
-        for scheduler_id in removal_scheduler_ids:
-            self.schedulers[scheduler_id].stop()
-            self.schedulers.pop(scheduler_id)
+        # Remove schedulers for organisation and stop threads
+        with self.lock:
+            for scheduler_id in removal_scheduler_ids:
+                if scheduler_id not in self.schedulers:
+                    continue
+
+                s = self.schedulers.pop(scheduler_id)
+                if not s:
+                    continue
+
+                s.stop()
 
         if removals:
             self.logger.info(
@@ -212,11 +217,17 @@ class App:
 
             scheduler_normalizer = self.create_normalizer_scheduler(org)
             self.schedulers[scheduler_normalizer.scheduler_id] = scheduler_normalizer
-            scheduler_normalizer.run()
+            self.run_in_thread(
+                name=f"scheduler_{scheduler_normalizer.scheduler_id}",
+                func=scheduler_normalizer.run,
+            )
 
             scheduler_boefje = self.create_boefje_scheduler(org)
             self.schedulers[scheduler_boefje.scheduler_id] = scheduler_boefje
-            scheduler_boefje.run()
+            self.run_in_thread(
+                name=f"scheduler_{scheduler_boefje.scheduler_id}",
+                func=scheduler_boefje.run,
+            )
 
         if additions:
             self.logger.info(
@@ -235,7 +246,7 @@ class App:
             * monitors
         """
         # API Server
-        self.run_in_thread(name="server", func=self.server.run, daemon=False)
+        self.run_in_thread(name="server", func=self.server.run)
 
         # Start the listeners
         for name, listener in self.listeners.items():
@@ -253,7 +264,7 @@ class App:
         )
 
         # Main thread
-        while not self.stop_event.is_set():
+        while not self.ctx.exception_event.is_set():
             time.sleep(0.01)
 
         self.shutdown()

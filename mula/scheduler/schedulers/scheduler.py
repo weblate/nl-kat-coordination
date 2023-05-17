@@ -3,10 +3,9 @@ import logging
 import threading
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from scheduler import context, models, queues, rankers, utils
-from scheduler.utils import thread
 
 
 class Scheduler(abc.ABC):
@@ -32,11 +31,6 @@ class Scheduler(abc.ABC):
             A rankers.Ranker instance.
         populate_queue_enabled:
             A boolean whether to populate the queue.
-        threads:
-            A dict of ThreadRunner instances, used for runner processes
-            concurrently.
-        stop_event: A threading.Event object used for communicating a stop
-            event across threads.
     """
 
     organisation: models.Organisation
@@ -71,9 +65,7 @@ class Scheduler(abc.ABC):
         self.queue: queues.PriorityQueue = queue
         self.ranker: rankers.Ranker = ranker
         self.populate_queue_enabled = populate_queue_enabled
-
-        self.threads: Dict[str, thread.ThreadRunner] = {}
-        self.stop_event: threading.Event = self.ctx.stop_event
+        self.stop_event = threading.Event()
 
     @abc.abstractmethod
     def populate_queue(self) -> None:
@@ -229,44 +221,17 @@ class Scheduler(abc.ABC):
 
             count += 1
 
-    def run_in_thread(
-        self,
-        name: str,
-        func: Callable[[], Any],
-        interval: float = 0.01,
-        daemon: bool = False,
-    ) -> None:
-        """Make a function run in a thread, and add it to the dict of threads.
-
-        Args:
-            name: The name of the thread.
-            func: The function to run in the thread.
-            interval: The interval to run the function.
-            daemon: Whether the thread should be a daemon.
-        """
-        self.threads[name] = utils.ThreadRunner(
-            target=func,
+    def run(self) -> None:
+        t = utils.ThreadRunner(
+            target=self.populate_queue,
             stop_event=self.stop_event,
-            interval=interval,
-            daemon=daemon,
+            exception_event=self.ctx.exception_event,
+            interval=self.ctx.config.scheduler.populate_queue_interval,
         )
-        self.threads[name].start()
+        t.start()
 
     def stop(self) -> None:
-        """Stop the scheduler."""
-        for t in self.threads.values():
-            t.join(5)
-
-        self.logger.info("Stopped scheduler: %s", self.scheduler_id)
-
-    def run(self) -> None:
-        # Populator
-        if self.populate_queue_enabled:
-            self.run_in_thread(
-                name="populator",
-                func=self.populate_queue,
-                interval=self.ctx.config.pq_populate_interval,
-            )
+        self.stop_event.set()
 
     def dict(self) -> Dict[str, Any]:
         return {

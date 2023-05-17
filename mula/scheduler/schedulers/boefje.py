@@ -75,15 +75,15 @@ class BoefjeScheduler(Scheduler):
                 pika.exceptions.ChannelClosed,
                 pika.exceptions.ChannelClosedByBroker,
                 pika.exceptions.AMQPConnectionError,
-            ) as e:
+            ):
                 self.logger.debug(
                     "Could not connect to rabbitmq queue: %s [organisation.id=%s, scheduler_id=%s]",
                     f"{self.organisation.id}__scan_profile_mutations",
                     self.organisation.id,
                     self.scheduler_id,
                 )
-                if self.stop_event.is_set():
-                    raise e
+                time.sleep(5)
+                return
 
             # Stop the loop when we've processed everything from the
             # messaging queue, so we can continue to the next step.
@@ -262,13 +262,12 @@ class BoefjeScheduler(Scheduler):
             new_boefjes = self.ctx.services.katalogus.get_new_boefjes_by_org_id(self.organisation.id)
         except (requests.exceptions.RetryError, requests.exceptions.ConnectionError) as e:
             self.logger.warning(
-                "Could not connect to rabbitmq queue: %s [org_id=%s, scheduler_id=%s]",
-                f"{self.organisation.id}__scan_profile_increments",
+                "Could not fetch new boefjes from katalogus [organisation.id=%s, scheduler_id=%s]",
                 self.organisation.id,
                 self.scheduler_id,
+                exc_info=e,
             )
-            if self.stop_event.is_set():
-                raise e
+            return
 
         if new_boefjes is None or not new_boefjes:
             self.logger.debug(

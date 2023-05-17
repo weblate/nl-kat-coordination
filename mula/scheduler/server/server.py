@@ -142,7 +142,7 @@ class Server:
         return response
 
     def get_schedulers(self) -> Any:
-        return [models.Scheduler(**s.dict()) for s in self.schedulers.values()]
+        return [models.Scheduler(**s.dict()) for s in self.schedulers.copy().values()]
 
     def get_scheduler(self, scheduler_id: str) -> Any:
         s = self.schedulers.get(scheduler_id)
