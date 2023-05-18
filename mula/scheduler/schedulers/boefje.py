@@ -75,15 +75,15 @@ class BoefjeScheduler(Scheduler):
                 pika.exceptions.ChannelClosed,
                 pika.exceptions.ChannelClosedByBroker,
                 pika.exceptions.AMQPConnectionError,
-            ) as e:
+            ):
                 self.logger.debug(
                     "Could not connect to rabbitmq queue: %s [organisation.id=%s, scheduler_id=%s]",
                     f"{self.organisation.id}__scan_profile_mutations",
                     self.organisation.id,
                     self.scheduler_id,
                 )
-                if self.stop_event.is_set():
-                    raise e
+                time.sleep(5)
+                return
 
             # Stop the loop when we've processed everything from the
             # messaging queue, so we can continue to the next step.
