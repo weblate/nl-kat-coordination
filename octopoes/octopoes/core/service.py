@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 from typing import Callable, Dict, List, Optional, Set, Type
 
@@ -153,18 +153,11 @@ class OctopoesService:
         parameters_references = self.origin_parameter_repository.list_by_origin({origin.id}, valid_time)
         parameters = self.ooi_repository.get_bulk({x.reference for x in parameters_references}, valid_time)
 
-        if bit_definition.config_ooi_relation_path is None:
-            try:
-                resulting_oois = BitRunner(bit_definition).run(source, list(parameters.values()))
-            except Exception as e:
-                logger.exception("Error running inference", exc_info=e)
-                return
-
-            self.save_origin(origin, resulting_oois, valid_time)
-            return
-
-        configs = self.ooi_repository.get_bit_configs(source, bit_definition, valid_time)
-        config = "" if len(configs) == 0 else configs[-1].config
+        config = {}
+        if bit_definition.config_ooi_relation_path is not None:
+            configs = self.ooi_repository.get_bit_configs(source, bit_definition, valid_time)
+            if len(configs) != 0:
+                config = configs[-1].config
 
         try:
             resulting_oois = BitRunner(bit_definition).run(source, list(parameters.values()), config=config)
@@ -516,3 +509,10 @@ class OctopoesService:
                 return expl
 
         return inheritance_chain
+
+    def recalculate_bits(self) -> int:
+        valid_time = datetime.now(timezone.utc)
+        origins = self.origin_repository.list(origin_type=OriginType.INFERENCE, valid_time=valid_time)
+        for origin in origins:
+            self._run_inference(origin, valid_time)
+        return len(origins)
