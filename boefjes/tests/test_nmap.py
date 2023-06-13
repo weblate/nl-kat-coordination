@@ -170,10 +170,10 @@ class NmapTest(TestCase):
             args,
         )
 
-    @pytest.skip
+    @pytest.mark.skipif("not Path(__file__).parent.joinpath('examples/tmp_large_nmap.xml').exists()")
     def test_large_nmap_parsing(self):
-        def test_parse_user_changed(self):
-            meta = NormalizerMeta.parse_raw(get_dummy_data("nmap-normalizer.json"))
-            local_repository = LocalPluginRepository(Path(__file__).parent.parent / "boefjes" / "plugins")
-            runner = LocalNormalizerJobRunner(local_repository)
-            output = runner.run(meta, get_dummy_data("tmp.json"))
+        meta = NormalizerMeta.parse_raw(get_dummy_data("nmap-normalizer.json"))
+        local_repository = LocalPluginRepository(Path(__file__).parent.parent / "boefjes" / "plugins")
+        runner = LocalNormalizerJobRunner(local_repository)
+        output = runner.run(meta, get_dummy_data("tmp_large_nmap.xml"))
+

@@ -9,8 +9,15 @@
       },
       "organization": "_dev",
       "input_ooi": "HTTPResource|internet|134.209.85.72|tcp|443|https|internet|mispo.es|https|internet|mispo.es|443|/",
-      "arguments": {}
+      "arguments": {
+        "input": {
+          "host": "127.0.0.1",
+          "network": {"name": "internet"},
+          "object_type": "IPAddressV4"
+        }
+      }
     },
     "mime_types": [{"value": "boefje/nmap-ip-range"}, {"value":  "nmap-ip-range"}]
-  }
+  },
+  "normalizer": {"id": "kat_nmap_normalize"}
 }

@@ -436,3 +436,5 @@ deployment/github_config.sh
 
 nl-kat-*
 /_version.py
+boefjes/**/tmp_large_nmap.xml
+
