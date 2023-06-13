@@ -1,0 +1,16 @@
+{
+  "id": "nmap-id",
+  "raw_data": {
+    "id": "123",
+    "boefje_meta": {
+      "id": "nmap-ip-range123",
+      "boefje": {
+        "id": "nmap-ip-range"
+      },
+      "organization": "_dev",
+      "input_ooi": "HTTPResource|internet|134.209.85.72|tcp|443|https|internet|mispo.es|https|internet|mispo.es|443|/",
+      "arguments": {}
+    },
+    "mime_types": [{"value": "boefje/nmap-ip-range"}, {"value":  "nmap-ip-range"}]
+  }
+}

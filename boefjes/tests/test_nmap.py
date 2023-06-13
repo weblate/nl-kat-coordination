@@ -1,6 +1,12 @@
 from unittest import TestCase
+from pathlib import Path
+import pytest
 
 from boefjes.plugins.kat_nmap.main import Protocol, build_nmap_arguments
+from boefjes.job_models import BoefjeMeta, NormalizerMeta
+from boefjes.katalogus.local_repository import LocalPluginRepository
+from boefjes.local import LocalBoefjeJobRunner, LocalNormalizerJobRunner
+from tests.stubs import get_dummy_data
 
 
 class NmapTest(TestCase):
@@ -163,3 +169,11 @@ class NmapTest(TestCase):
             ],
             args,
         )
+
+    @pytest.skip
+    def test_large_nmap_parsing(self):
+        def test_parse_user_changed(self):
+            meta = NormalizerMeta.parse_raw(get_dummy_data("nmap-normalizer.json"))
+            local_repository = LocalPluginRepository(Path(__file__).parent.parent / "boefjes" / "plugins")
+            runner = LocalNormalizerJobRunner(local_repository)
+            output = runner.run(meta, get_dummy_data("tmp.json"))
