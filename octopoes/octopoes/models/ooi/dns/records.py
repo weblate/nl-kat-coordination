@@ -144,18 +144,14 @@ class DNSPTRRecord(DNSRecord):
     object_type: Literal["DNSPTRRecord"] = "DNSPTRRecord"
     dns_record_type: Literal["PTR"] = "PTR"
     address: Optional[Reference] = ReferenceField(IPAddress)
-    hostname: Optional[Reference] = ReferenceField(Hostname)
-    reverse: str
 
-    _natural_key_attrs = ["reverse", "value"]
+    _natural_key_attrs = ["hostname", "address"]
 
     _reverse_relation_names = {
         "hostname": "dns_ptr_records",
-        "pointer_hostname": "ptr_record_targets",
         "address": "ptr_record_ip",
-        "reverse": "ptr_record_reverse",
     }
 
     @classmethod
     def format_reference_human_readable(cls, reference: Reference) -> str:
-        return f"{reference.tokenized.reverse} -> {reference.tokenized.value}"
+        return f"{reference.tokenized.address.address} -> {reference.tokenized.hostname.name}"
