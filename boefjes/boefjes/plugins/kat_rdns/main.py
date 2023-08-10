@@ -18,10 +18,8 @@ def run(boefje_meta: BoefjeMeta) -> List[Tuple[set, Union[bytes, str]]]:
         answer: Answer = resolver.resolve(reverse_ip, "PTR")
         result = f"RESOLVER: {answer.nameserver}\n{answer.response}"
         return [(set(), result)]
-    except dns.resolver.NoAnswer:
-        pass
     except dns.resolver.NXDOMAIN:
         return [(set(), "NXDOMAIN")]
-    except dns.resolver.Timeout:
+    except (dns.resolver.Timeout, except dns.resolver.NoAnswer):
         pass
     return [(set(), "No PTR record found.")]
